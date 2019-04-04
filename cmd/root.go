@@ -60,7 +60,7 @@ func init() {
 		log.SetFormatter(&log.JSONFormatter{})
 	} else {
 		log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: "Jan _2 15:04:05.000"})
-		log.SetLevel(log.DebugLevel)
+		log.SetLevel(log.InfoLevel)
 	}
 	filenameHook := filename.NewHook()
 	filenameHook.Field = "src"
