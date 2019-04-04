@@ -12,4 +12,8 @@ Asynchronous high-performance distributed OpenFlow 1.3/1.5 platform in Go and Py
 
 ## Docs
 
-Fluxory is still under heavy development I'm working in the CI/CD pipeline and docs. I'll release more updates by Apr 5.
+Fluxory is still under heavy development I'm working in the CI/CD pipeline and docs. Meanwhile, you can check the source code or the examples below:
+
+## Examples
+
+- [simple_switch.py](./examples/simple_switch.py)
