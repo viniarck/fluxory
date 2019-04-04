@@ -17,3 +17,24 @@ Fluxory is still under heavy development I'm working in the CI/CD pipeline and d
 ## Examples
 
 - [simple_switch.py](./examples/simple_switch.py)
+
+## Running the server OpenFlow (fluxory)
+
+- Build the binary first:
+
+```
+mkdir bin
+go build -ldflags "-s -w" -o bin/fluxory
+```
+
+- Compose up rabbitmq:
+
+```
+docker-compose up -d
+```
+
+- Run it:
+
+```
+./bin/fluxory
+```
