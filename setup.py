@@ -1,6 +1,6 @@
 from setuptools import setup
 from fluxory.__version__ import version
-desc = 'Asynchronous high-performance distributed OpenFlow 1.3/1.5 platform'
+desc = 'Asynchronous high-performance distributed OpenFlow 1.3/1.5 framework'
 
 setup(
     name='fluxory',

@@ -1,4 +1,4 @@
-// Copyright © 2019 NAME HERE <EMAIL ADDRESS>
+// Copyright © 2019 Vinicius Arcanjo viniarck@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,8 +31,8 @@ var cfgFile string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "fluxory",
-	Short: "Asynchronous high-performance distributed OpenFlow 1.3/1.5 platform",
-	Long:  `Asynchronous high-performance distributed OpenFlow 1.3/1.5 platform.`,
+	Short: "Asynchronous high-performance distributed OpenFlow 1.3/1.5 framework.",
+	Long:  `Asynchronous high-performance distributed OpenFlow 1.3/1.5 framework.`,
 
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
