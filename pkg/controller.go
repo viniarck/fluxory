@@ -72,11 +72,13 @@ func (c *Controller) sendEcho(sw *SwitchConn, version uint8) {
 	c.writeXidsOut(xid, msgType, sw, err)
 }
 
-func (c *Controller) writeXidsOut(xid uint32, msgType uint8, sw *SwitchConn, err error) {
+func (c *Controller) writeXidsOut(xid uint32, msgType uint8, sw *SwitchConn, err error) (chan bool, error) {
 	if err != nil {
-		return
+		return nil, err
 	}
-	c.xidsOut[XidPair{sw.NetAddress, xid}] = XidResp{msgType, time.Now()}
+	ch := make(chan bool, 1)
+	c.xidsOut[XidPair{sw.NetAddress, xid}] = XidResp{ofp.ExpectedType(msgType), time.Now(), ch}
+	return ch, nil
 }
 
 func (c *Controller) handleFeaReply(sw *SwitchConn, version uint8, data []byte) {
@@ -172,11 +174,6 @@ func (c Controller) listSwitchesRPC() error {
 	return nil
 }
 
-func compute(ch chan int) {
-	time.Sleep(time.Millisecond * 3)
-	ch <- 42
-}
-
 func (c Controller) WriteDpidRPC() error {
 	name := "write_dpid"
 	ch, msgs, err := c.bh.NewRPCQueue(name)
@@ -189,22 +186,52 @@ func (c Controller) WriteDpidRPC() error {
 			log.Debugf("Body: %s", string(d.Body))
 			log.Debugf("ReplyTo: %s", string(d.ReplyTo))
 
-			// response := `{"dpids": [1, 2, 3, 4]}`
-			chRes := make(chan int)
-			go compute(chRes)
-
-			var resFinal int
-			// TODO handle timeout 30%
-			select {
-			case resFinal = <-chRes:
-			case <-time.After(time.Second):
-				resFinal = -1
+			var rpcRes RPCRequest
+			err = json.Unmarshal(d.Body, &rpcRes)
+			if err != nil {
+				log.Errorf("Couldn't Unmarshal %v", d.Body)
+				continue
 			}
-			jsonResponse, err := json.Marshal(resFinal)
+			dpid := rpcRes.Dpid
+			var swConn *SwitchConn
+			if sw, ok := c.Dpids[uint64(dpid)]; ok {
+				swConn = sw
+			} else {
+				log.Errorf("Dpid %v not found", dpid)
+				continue
+			}
+			ofpMsg := ofp.Header{}
+			err := ofpMsg.Decode(rpcRes.Payload)
+			if err != nil {
+				log.Errorf("Couldn't decode message %v", d.Body)
+				continue
+			}
+
+			log.Infof("Header %v jsonRes %v", ofpMsg, rpcRes)
+			err = swConn.WriteRaw(rpcRes.Payload)
+			if err != nil {
+				log.Errorf("Couldn't write raw bytes, error: %v", err)
+				continue
+			}
+			wCh, err := c.writeXidsOut(ofpMsg.Xid, ofpMsg.Type, swConn, err)
+			if err != nil {
+				continue
+			}
+
+			rpcResponse := RPCResponse{Result: "", Error: ""}
+			var resFinal bool
+			select {
+			case resFinal = <-wCh:
+				if !resFinal {
+					rpcResponse.Error = "Timeout"
+				}
+			case <-time.After(swConn.LowestRes + swConn.LowestRes):
+				rpcResponse.Error = "Timeout"
+			}
+			jsonResponse, err := json.Marshal(rpcResponse)
 			if err != nil {
 				log.Error(err)
 			}
-			log.Debugf("resp: %s", string(jsonResponse))
 
 			err = ch.Publish(
 				"",        // exchange
@@ -230,7 +257,7 @@ func (c Controller) WriteDpidRPC() error {
 
 func (c Controller) showSwitches() {
 	for k, v := range c.Clients {
-		log.Infof("Switch %v, Status %s LowestRes %v", k, v.HSStatus, v.LowestRes)
+		log.Debugf("Switch %v, Status %s LowestRes %v", k, v.HSStatus, v.LowestRes)
 	}
 }
 
@@ -246,7 +273,7 @@ func (c Controller) fetchInQueue() {
 	xidPair = &XidPair{}
 	for {
 		msg := <-c.inQueue
-		// log.Debugf("Got %v", msg)
+		log.Debugf("Got message %v", msg)
 		err = ofpMsg.Decode(msg.Data)
 		if err != nil {
 			log.Errorf("Couldn't decode %v from %v ", msg.Data, msg.Client)
@@ -269,9 +296,12 @@ func (c Controller) fetchInQueue() {
 			log.Debugf("Message type %v doesn't have a parser yet. Received from %v", ofpMsg.Type, msg.Client)
 		}
 		if res, ok := c.xidsOut[*xidPair]; ok {
-			// TODO check expected type... report back the error..
-			// TODO cancel timeout..
-			log.Infof("Found it %v!", res)
+			if ofpMsg.Type == res.Type {
+				res.Chan <- true
+			} else {
+				res.Chan <- false
+			}
+			log.Debugf("Found it %v!", res)
 			sw.UpdateRespTime(&res.Sent)
 			delete(c.xidsOut, *xidPair)
 		}

@@ -16,6 +16,11 @@ type RPCResponse struct {
 	Error  string      `json:"error"`
 }
 
+type RPCRequest struct {
+	Dpid    int    `json:"dpid"`
+	Payload []byte `json:"payload"`
+}
+
 func EncodeResponse(resp *RPCResponse) ([]byte, error) {
 	res, err := json.Marshal(resp)
 	return res, err

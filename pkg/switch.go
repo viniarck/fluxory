@@ -16,6 +16,7 @@ type XidPair struct {
 type XidResp struct {
 	Type uint8
 	Sent time.Time
+	Chan chan bool
 }
 
 type Switch struct {
@@ -48,6 +49,11 @@ func (sw *SwitchConn) Write(m ofp.OFPMessage) (uint32, uint8, error) {
 		log.Error(err)
 	}
 	return xid, m.GetType(), err
+}
+
+func (sw *SwitchConn) WriteRaw(b []byte) error {
+	_, err := sw.C.Write(b)
+	return err
 }
 
 func (sw *SwitchConn) UpdateRespTime(t *time.Time) {
