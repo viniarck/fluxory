@@ -3,7 +3,21 @@
 
 from aio_pika.patterns import RPC
 import json
-from typing import Dict, Any
+from typing import Dict, List, Any
+
+
+class RequestRawRPC(object):
+
+    """Abstract a RPC Request encoding. """
+
+    def __init__(self, dpid: int, payload=List[int]) -> None:
+        """Constructor of RequestRPC."""
+        self.dpid = dpid
+        self.payload = payload
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dict."""
+        return {"dpid": self.dpid, "payload": self.payload}
 
 
 class ResponseRPC(object):
