@@ -63,11 +63,8 @@ func (s TCPServer) handleConnection(c net.Conn) {
 	defer s.DelSwitch(&sConn)
 	const (
 		OFP_HEADER_SIZE int = 8
-		// TODO double check for the highest size...
-		OFP_HIGHEST_LEN int = 32
+		OFP_HIGHEST_LEN int = 256
 	)
-	// TODO release the minimal core asap and finish up typing with pyre monekeypyre on fluxory-py
-	// TODO implement duration...
 	data := make([]byte, OFP_HIGHEST_LEN)
 	var msg *ofp.Header
 	for {

@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -115,9 +116,70 @@ func (c Controller) Run() error {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
+	c.declarePubQueues()
 	err = c.ServeForever()
 	// TODO stop goroutines..
 	return err
+}
+
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
+}
+
+func (c Controller) publish(dpid uint64, msg_type uint8, payload []byte) {
+	log.Debugf("Publishing msg_type: %v dpid: %v payload: %v", msg_type, dpid, payload)
+	conn, err := amqp.Dial(c.bh.fullAddress)
+	failOnError(err, "Failed to Dial")
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to create a channel")
+	err = ch.Publish(
+		"fluxory", // exchange
+		fmt.Sprintf("CtlOFPEvent.%d.%d", msg_type, dpid), // routing key
+		false, // mandatory
+		false,
+		amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType:  "text/plain",
+			Body:         payload,
+		})
+	failOnError(err, "Failed to publish a message")
+}
+
+func (c Controller) declarePubQueues() {
+	log.Info("Declaring PubQueues")
+
+	conn, err := amqp.Dial(c.bh.fullAddress)
+	failOnError(err, "Failed to Dial")
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to create a channel")
+	err = ch.ExchangeDeclare(
+		"fluxory", // name
+		"topic",   // type
+		false,     // durable
+		false,     // auto-deleted
+		false,     // internal
+		false,     // no-wait
+		nil,       // arguments
+	)
+	failOnError(err, "Failed to create declare an exchange")
+	q, err := ch.QueueDeclare(
+		"CtlOFPEvent", // name
+		false,         // durable
+		false,         // delete when usused
+		true,          // exclusive
+		false,         // no-wait
+		nil,           // arguments
+	)
+	failOnError(err, "Failed to declare a queue")
+	err = ch.QueueBind(
+		q.Name,    // queue name
+		"",        // routing key
+		"fluxory", // exchange
+		false,
+		nil)
+	failOnError(err, "Failed to bind a queue")
 }
 
 func (c Controller) registerRPCMethods() error {
@@ -223,10 +285,10 @@ func (c Controller) WriteDpidRPC() error {
 			select {
 			case resFinal = <-wCh:
 				if !resFinal {
-					rpcResponse.Error = "Timeout"
+					rpcResponse.Error = "Mismatched message type"
 				}
 			case <-time.After(swConn.LowestRes + swConn.LowestRes):
-				rpcResponse.Error = "Timeout"
+
 			}
 			jsonResponse, err := json.Marshal(rpcResponse)
 			if err != nil {
@@ -304,6 +366,9 @@ func (c Controller) fetchInQueue() {
 			log.Debugf("Found it %v!", res)
 			sw.UpdateRespTime(&res.Sent)
 			delete(c.xidsOut, *xidPair)
+		}
+		if ofp.IsAsymmetric(ofpMsg.Type) {
+			c.publish(sw.Dpid, ofpMsg.Type, msg.Data[:ofpMsg.Length])
 		}
 		sw.LastSeen = time.Now()
 		c.showSwitches()

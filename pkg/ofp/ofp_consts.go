@@ -12,6 +12,15 @@ func ExpectedType(msgType uint8) uint8 {
 	}
 }
 
+func IsAsymmetric(msgType uint8) bool {
+	switch msgType {
+	case 1, 10, 11, 12:
+		return true
+	default:
+		return false
+	}
+}
+
 const (
 
 	// Symetric controller/switch messages
