@@ -37,7 +37,7 @@ class SimpleSwitch(App):
     def on_ofp_message(self, message: IncomingMessage) -> None:
         """Message broker incoming messages callback."""
         with message.process():
-            log.debug("received [x] %r:%r" % (message.routing_key, message.body))
+            log.debug(f"received [x] {message.routing_key}:{message.body}")
             (version, msg_type, msg_len, xid) = ofproto_parser.header(message.body)
             log.debug(
                 f"msg {version} {msg_type} {msg_len} {xid} {len(message.body)} {type(message.body)}"
@@ -54,7 +54,7 @@ class SimpleSwitch(App):
     def on_t_message(self, message: IncomingMessage) -> None:
         """Message broker incoming messages callback."""
         with message.process():
-            log.debug("received [x] %r:%r" % (message.routing_key, message.body))
+            log.debug(f"received [x] {message.routing_key}:{message.body}")
 
     async def send_flow_mod_rpc(self, dpid: int, match, port: int, err: bool = False):
         """Send a flow mod."""
@@ -80,7 +80,7 @@ class SimpleSwitch(App):
     async def handle_pktin(
         self, pkt_in: ofproto_v1_5_parser.OFPPacketIn, dpid: int
     ) -> None:
-        """docstring."""
+        """Handle packet in."""
         pkt = packet.Packet(pkt_in.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
 
