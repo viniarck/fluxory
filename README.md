@@ -40,3 +40,49 @@ docker-compose up -d
 ```
 ./bin/fluxory
 ```
+
+## Benchmarks
+
+The following benchmarks compare these two code snippets written in Go and Python, they both serialize 10 million OpenFlow Hello messages:
+
+```go
+package main
+
+import "github.com/viniarck/fluxory/pkg/ofp15"
+
+func main() {
+	for i := 0; i < 1000*10000; i++ {
+		ofp15.NewHello(ofp15.OFPP_V15).Encode()
+	}
+}
+```
+
+```python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from ryu.ofproto import ofproto_v1_5_parser
+
+
+def main() -> None:
+    """Main function."""
+    for i in range(1000 * 10000):
+        ofproto_v1_5_parser.OFPHello().serialize()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+The benchmark was run with [hyperfine](https://github.com/sharkdp/hyperfine), Go 1.12, and Python 3.7.3, on my laptop, as you can see the Go code is more than 3 times faster as expected:
+
+```
+❯ hyperfine './bench'
+  Time (mean ± σ):      9.608 s ±  0.474 s    [User: 9.694 s, System: 0.035 s]
+  Range (min … max):    9.085 s … 10.395 s    10 runs
+```
+
+```
+❯ hyperfine 'python bench.py'
+  Time (mean ± σ):     35.028 s ±  0.959 s    [User: 34.938 s, System: 0.021 s]
+  Range (min … max):   34.015 s … 36.617 s    10 runs
+```
