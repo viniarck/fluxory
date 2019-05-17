@@ -4,15 +4,16 @@ https://lh3.googleusercontent.com/uccVAZW63u72EAUsQ-SSGIuQD8bf7-2lITgrhXQ6X2ZwyT
 
 Asynchronous high-performance distributed OpenFlow 1.3/1.5 framework in Go and Python.
 
+## Goals
+
+- Distributed OpenFlow framework leveraging multiple CPU cores.
+- Be faster than Ryu in terms of serialization/deserialization of messages.
+
 ## Major Features
 
 - Distributed computing
 - Reliable queueing and asynchronous OpenFlow events notification
 - Applications are written in either Go or Python (asyncio)
-
-## Docs
-
-Fluxory is still under heavy development I'm working in the CI/CD pipeline and docs. Meanwhile, you can check the source code or the examples below:
 
 ## Examples
 
