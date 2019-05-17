@@ -1,0 +1,11 @@
+stages:
+# - build
+- test
+
+image: golang:1.12
+
+fluxory-go:
+  stage: test
+  script:
+    - go version
+    - go test github.com/viniarck/fluxory/pkg/... -short -v
